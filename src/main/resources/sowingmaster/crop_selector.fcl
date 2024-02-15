@@ -1,0 +1,145 @@
+FUNCTION_BLOCK crop_selector
+
+VAR_INPUT
+    type : REAL;
+	acidity : REAL;
+	seed_time : REAL;
+	crop_time : REAL;
+END_VAR
+
+VAR_OUTPUT
+    acidity_factor : REAL;
+	density : REAL;
+	plant_time : REAL;
+	grow_time : REAL;
+END_VAR
+
+FUZZIFY type
+    TERM loam := gauss 0 0.23;
+    TERM peaty := gauss 1 0.23;
+    TERM silty := gauss 2 0.23;
+    TERM clay := gauss 3 0.23;
+    TERM cretaceous := gauss 4 0.23;
+    TERM sandy := gauss 5 0.23;
+END_FUZZIFY
+
+FUZZIFY acidity
+	TERM acidic := (0, 1) (5.5, 1) (7, 0);
+	TERM neutral := trape 6.2 6.8 7.2 7.8;
+	TERM alkaline := (7, 0) (8.5, 1) (12, 1);
+END_FUZZIFY
+
+FUZZIFY seed_time
+    TERM winter1 := gbell 1 4 0.5;
+    TERM spring := gbell 1 4 3.5;
+    TERM summer := gbell 1 4 6.5;
+    TERM autumn := gbell 1 4 9.5;
+    TERM winter2 := gbell 1 4 12.5;
+END_FUZZIFY
+
+FUZZIFY crop_time
+    TERM winter1 := gbell 1 4 0.5;
+    TERM spring := gbell 1 4 3.5;
+    TERM summer := gbell 1 4 6.5;
+    TERM autumn := gbell 1 4 9.5;
+    TERM winter2 := gbell 1 4 12.5;
+END_FUZZIFY
+
+DEFUZZIFY acidity_factor
+	TERM low := (-1, 1) (-0.25, 0);
+	TERM neutral := trian -0.75 0 0.75;
+	TERM high := (0.25, 0) (1, 1);
+	METHOD : COG;
+	DEFAULT := 0;
+END_DEFUZZIFY
+
+DEFUZZIFY density
+	TERM light := (0, 1) (0.5, 0);
+	TERM normal := trian 0 0.5 1;
+	TERM heavy := (0.5, 0) (1, 1);
+	METHOD : COG;
+	DEFAULT := 0;
+END_DEFUZZIFY
+
+DEFUZZIFY plant_time
+	TERM spring := gauss 0 0.25;
+	TERM summer := gauss 1 0.25;
+	TERM autumn := gauss 2 0.25;
+	TERM winter := gauss 3 0.25;
+	METHOD : COG;
+	DEFAULT := 0;
+END_DEFUZZIFY
+
+DEFUZZIFY grow_time
+	TERM m3 := trape 2.5 2.5 3.5 5;
+	TERM m6 := trape 4 5.5 6.5 8;
+	TERM m9 := trape 7 8.5 9.5 11;
+	TERM m12 := trape 10 11.5 12.5 12.5;
+	METHOD : COG;
+	DEFAULT := 0;
+END_DEFUZZIFY
+
+RULEBLOCK acidity_rules
+	OR : MAX;
+	ACT : MIN;
+	ACCU : MAX;
+
+	RULE 1 : IF acidity IS acidic THEN acidity_factor IS high;
+	RULE 2 : IF acidity IS neutral THEN acidity_factor IS neutral;
+	RULE 3 : IF acidity IS alkaline THEN acidity_factor IS low;
+END_RULEBLOCK
+
+RULEBLOCK density_rules
+	OR : MAX;
+	ACT : MIN;
+	ACCU : MAX;
+
+	RULE 1 : IF type IS cretaceous OR type IS sandy THEN density IS light;
+	RULE 2 : IF type IS silty OR type IS clay THEN density IS normal;
+	RULE 3 : IF type IS loam OR type IS peaty THEN density IS heavy;
+END_RULEBLOCK
+
+RULEBLOCK plant_time_rules
+	AND : MIN;
+	ACT : MIN;
+	ACCU : MAX;
+
+	RULE 1 : IF seed_time IS spring THEN plant_time IS spring;
+	RULE 2 : IF seed_time IS summer THEN plant_time IS summer;
+	RULE 3 : IF seed_time IS autumn THEN plant_time IS autumn;
+	RULE 4 : IF seed_time IS winter1 OR seed_time IS winter2 THEN plant_time IS winter;
+END_RULEBLOCK
+
+RULEBLOCK grow_time_rules
+    OR : MAX;
+    ACT : MIN;
+    ACCU : MAX;
+
+    RULE 1 : IF seed_time IS winter1 AND crop_time IS winter1 OR seed_time IS winter1
+        AND crop_time IS winter2 THEN grow_time IS m12;
+    RULE 2 : IF seed_time IS winter1 AND crop_time IS spring THEN grow_time IS m3;
+    RULE 3 : IF seed_time IS winter1 AND crop_time IS summer THEN grow_time IS m6;
+    RULE 4 : IF seed_time IS winter1 AND crop_time IS autumn THEN grow_time IS m9;
+    RULE 5 : IF seed_time IS spring AND crop_time IS winter1 OR seed_time IS spring
+        AND crop_time IS winter2 THEN grow_time IS m9;
+    RULE 6 : IF seed_time IS spring AND crop_time IS spring THEN grow_time IS m12;
+    RULE 7 : IF seed_time IS spring AND crop_time IS summer THEN grow_time IS m3;
+    RULE 8 : IF seed_time IS spring AND crop_time IS autumn THEN grow_time IS m6;
+    RULE 9 : IF seed_time IS summer AND crop_time IS winter1 OR seed_time IS summer
+        AND crop_time IS winter2 THEN grow_time IS m6;
+    RULE 10 : IF seed_time IS summer AND crop_time IS spring THEN grow_time IS m9;
+    RULE 11 : IF seed_time IS summer AND crop_time IS summer THEN grow_time IS m12;
+    RULE 12 : IF seed_time IS summer AND crop_time IS autumn THEN grow_time IS m3;
+    RULE 13 : IF seed_time IS autumn AND crop_time IS winter1 OR seed_time IS autumn
+        AND crop_time IS winter2 THEN grow_time IS m3;
+    RULE 14 : IF seed_time IS autumn AND crop_time IS spring THEN grow_time IS m6;
+    RULE 15 : IF seed_time IS autumn AND crop_time IS summer THEN grow_time IS m9;
+    RULE 16 : IF seed_time IS autumn AND crop_time IS autumn THEN grow_time IS m12;
+    RULE 17 : IF seed_time IS winter2 AND crop_time IS winter1 OR seed_time IS winter2
+        AND crop_time IS winter2 THEN grow_time IS m12;
+    RULE 18 : IF seed_time IS winter2 AND crop_time IS spring THEN grow_time IS m3;
+    RULE 19 : IF seed_time IS winter2 AND crop_time IS summer THEN grow_time IS m6;
+    RULE 20 : IF seed_time IS winter2 AND crop_time IS autumn THEN grow_time IS m9;
+END_RULEBLOCK
+
+END_FUNCTION_BLOCK

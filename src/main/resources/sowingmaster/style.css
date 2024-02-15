@@ -1,0 +1,11 @@
+#vbox {
+    -fx-background-image: url(bg.png);
+    -fx-background-repeat: stretch;
+    -fx-background-size: 640 320;
+    -fx-background-position: center center;
+}
+
+#pane {
+    -fx-background-color: #F5F5F5;
+    -fx-background-radius: 5px;
+}
